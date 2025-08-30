@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>4-Body PMF Pyramid — Edge Colors + Orbit Buttons</title>
+  <style>
+    html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    .app { display: grid; grid-template-columns: 300px 1fr 400px; grid-template-rows: auto 1fr auto; height: 100%; }
+    header { grid-column: 1 / 4; padding: 10px 14px; border-bottom: 1px solid #ddd; }
+    header h1 { margin: 0; font-size: 18px; }
+    #left { border-right: 1px solid #eee; padding: 12px; overflow: auto; }
+    #center { position: relative; background: #000; }
+    #right { border-left: 1px solid #eee; padding: 12px; overflow: auto; }
+    footer { grid-column: 1 / 4; border-top: 1px solid #ddd; padding: 8px 12px; display: flex; gap: 8px; align-items: center; }
+    #canvas { width: 100%; height: 100%; min-height: 420px; display: block; }
+    #faceLabel {
+      position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.92);
+      padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; pointer-events: none;
+    }
+    .group { margin-bottom: 16px; }
+    .group h3 { margin: 10px 0 6px; font-size: 14px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0; }
+    input[type="range"] { width: 140px; }
+    select, input[type="number"] { width: 160px; }
+    .measure { border: 1px solid #eee; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .measure .left { display: flex; flex-direction: column; }
+    .status { display: inline-block; min-width: 72px; text-align: center; border-radius: 12px; padding: 4px 8px; font-size: 12px; color: #fff; }
+    .btn-measure { cursor: pointer; border: 1px solid #ddd; background: #fff; border-radius: 8px; padding: 6px 8px; font-size: 12px; }
+    .btn-measure:hover { background: #f5f5f5; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>4-Body PMF Pyramid — Edge Colors + Orbit Buttons</h1>
+      <div>Drag to rotate. Right-side measures are clickable: the camera orbits so that edge faces you. Edge length & color reflect the measure.</div>
+    </header>
+
+    <!-- Left Controls -->
+    <aside id="left">
+      <div class="group"><h3>Product</h3>
+        <div class="row"><label>Features</label><input id="features" type="range" min="0" max="5" value="3"></div>
+        <div class="row"><label>Quality</label><input id="quality" type="range" min="0" max="5" value="3"></div>
+        <div class="row"><label>UX/Onboarding</label><input id="ux" type="range" min="0" max="5" value="3"></div>
+        <div class="row"><label>Cost Index</label><input id="cost" type="range" min="0" max="5" value="2"></div>
+      </div>
+      <div class="group"><h3>Price</h3>
+        <div class="row"><label>Price Point</label><input id="price" type="number" value="20"></div>
+        <div class="row"><label>Discount %</label><input id="discount" type="range" min="0" max="100" value="0"></div>
+      </div>
+      <div class="group"><h3>Promotion</h3>
+        <div class="row"><label>Messaging</label><input id="messaging" type="range" min="0" max="5" value="3"></div>
+        <div class="row"><label>Brand</label><input id="brand" type="range" min="0" max="5" value="3"></div>
+      </div>
+      <div class="group"><h3>Placement</h3>
+        <div class="row"><label>Geo Coverage</label><input id="geo" type="range" min="0" max="5" value="2"></div>
+        <div class="row"><label>Go-to-Market</label><input id="gtm" type="range" min="0" max="5" value="2"></div>
+      </div>
+    </aside>
+
+    <!-- Center Pyramid -->
+    <main id="center">
+      <div id="faceLabel">Face: —</div>
+      <canvas id="canvas"></canvas>
+    </main>
+
+    <!-- Right Measures -->
+    <aside id="right">
+      <div class="group"><h3>Base Edge Measures</h3>
+        <div class="measure" id="row-adoption">
+          <div class="left">
+            <strong>Adoption</strong><small>(Product–Promotion)</small>
+          </div>
+          <div>
+            <span id="adoption" style="margin-right:6px;">0.0</span>
+            <span id="adoptionStatus" class="status">-</span>
+            <button class="btn-measure" data-focus="adoption">View</button>
+          </div>
+        </div>
+
+        <div class="measure" id="row-wtp">
+          <div class="left">
+            <strong>WTP / Churn</strong><small>(Promotion–Price)</small>
+          </div>
+          <div>
+            <span id="wtp" style="margin-right:6px;">0.0</span>
+            <span id="wtpStatus" class="status">-</span>
+            <button class="btn-measure" data-focus="wtp">View</button>
+          </div>
+        </div>
+
+        <div class="measure" id="row-channelPricing">
+          <div class="left">
+            <strong>Channel Pricing</strong><small>(Price–Placement)</small>
+          </div>
+          <div>
+            <span id="channelPricing" style="margin-right:6px;">0.0</span>
+            <span id="channelPricingStatus" class="status">-</span>
+            <button class="btn-measure" data-focus="channelPricing">View</button>
+          </div>
+        </div>
+
+        <div class="measure" id="row-activation">
+          <div class="left">
+            <strong>Activation & Retention</strong><small>(Placement–Product)</small>
+          </div>
+          <div>
+            <span id="activation" style="margin-right:6px;">0.0</span>
+            <span id="activationStatus" class="status">-</span>
+            <button class="btn-measure" data-focus="activation">View</button>
+          </div>
+        </div>
+
+        <div class="measure" id="row-grossMargin">
+          <div class="left">
+            <strong>Gross Margin / Unit Economics</strong><small>(Product–Price)</small>
+          </div>
+          <div>
+            <span id="grossMargin" style="margin-right:6px;">0.0</span>
+            <span id="grossMarginStatus" class="status">-</span>
+            <button class="btn-measure" data-focus="grossMargin">View</button>
+          </div>
+        </div>
+
+        <div class="measure" id="row-channelFit">
+          <div class="left">
+            <strong>Channel Fit</strong><small>(Promotion–Placement)</small>
+          </div>
+          <div>
+            <span id="channelFit" style="margin-right:6px;">0.0</span>
+            <span id="channelFitStatus" class="status">-</span>
+            <button class="btn-measure" data-focus="channelFit">View</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="group"><h3>Apex Links</h3>
+        <div class="measure">
+          <div class="left"><strong>Loves Product</strong><small>(Customer↔Product)</small></div>
+          <div>
+            <span id="lovesProduct" style="margin-right:6px;">0.0</span>
+            <span id="lovesProductStatus" class="status">-</span>
+          </div>
+        </div>
+        <div class="measure">
+          <div class="left"><strong>Has Budget</strong><small>(Customer↔Price)</small></div>
+          <div>
+            <span id="hasBudget" style="margin-right:6px;">0.0</span>
+            <span id="hasBudgetStatus" class="status">-</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <footer>
+      <button id="save">Save</button>
+      <button id="load">Load</button>
+      <button id="auto">Auto-Simulate</button>
+    </footer>
+  </div>
+
+  <!-- Three.js -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
+  <script>
+    let scene, camera, renderer, mesh, edgeLines;
+    const canvas = document.getElementById('canvas');
+    const faceLabel = document.getElementById('faceLabel');
+
+    // Global verts to enable orbit targeting
+    let baseVerts = []; // v0..v3, Vector3
+    let apexVert = null;
+
+    const controls = {
+      features: 3, quality: 3, ux: 3, cost: 2,
+      price: 20, discount: 0,
+      messaging: 3, brand: 3,
+      geo: 2, gtm: 2
+    };
+
+    // Helpers
+    const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+
+    function statusColor(val) {
+      if (val >= 4) return { text: "Green", color: "#4caf50" };
+      if (val >= 2) return { text: "Yellow", color: "#ffb300" };
+      return { text: "Red", color: "#e53935" };
+    }
+    function hexToRgbNorm(hex) {
+      const n = hex.replace('#','');
+      const bigint = parseInt(n,16);
+      return [(bigint>>16 & 255)/255, ((bigint>>8)&255)/255, (bigint&255)/255];
+    }
+
+    function updateMeasures() {
+      const adoption = (controls.features + controls.quality + controls.messaging + controls.brand)/4;
+      const wtp = (controls.price/10 + (100-controls.discount)/25 + controls.messaging + controls.brand)/4;
+      const channelPricing = (controls.price/10 + controls.discount/25 + controls.geo + controls.gtm)/4;
+      const activation = (controls.geo + controls.gtm + controls.features + controls.ux)/4;
+      const grossMargin = (5 - controls.cost) + controls.price/20;
+      const channelFit = (controls.messaging + controls.brand + controls.geo)/3;
+      const lovesProduct = (controls.features + controls.quality + controls.ux)/3;
+      const hasBudget = (controls.price/20 + (100-controls.discount)/25);
+
+      const measures = {
+        adoption: clamp(adoption,0,5),
+        wtp: clamp(wtp,0,5),
+        channelPricing: clamp(channelPricing,0,5),
+        activation: clamp(activation,0,5),
+        grossMargin: clamp(grossMargin,0,5),
+        channelFit: clamp(channelFit,0,5),
+        lovesProduct: clamp(lovesProduct,0,5),
+        hasBudget: clamp(hasBudget,0,5),
+      };
+
+      // Update UI numbers + badges
+      const map = [
+        ["adoption","adoptionStatus"],
+        ["wtp","wtpStatus"],
+        ["channelPricing","channelPricingStatus"],
+        ["activation","activationStatus"],
+        ["grossMargin","grossMarginStatus"],
+        ["channelFit","channelFitStatus"],
+        ["lovesProduct","lovesProductStatus"],
+        ["hasBudget","hasBudgetStatus"],
+      ];
+      map.forEach(([id, sid]) => {
+        const val = measures[id];
+        const el = document.getElementById(id);
+        if (el) el.textContent = val.toFixed(1);
+        const st = document.getElementById(sid);
+        if (st) {
+          const sc = statusColor(val);
+          st.textContent = sc.text;
+          st.style.background = sc.color;
+        }
+      });
+
+      return measures;
+    }
+
+    function computeBaseVerts(measures) {
+      // Corner strengths (influence each base vertex radius)
+      const sP = (measures.adoption + measures.activation + measures.grossMargin)/3; // Product corner v0
+      const sM = (measures.adoption + measures.wtp + measures.channelFit)/3;       // Promotion v1
+      const sR = (measures.wtp + measures.channelPricing + measures.grossMargin)/3; // Price v2
+      const sL = (measures.channelPricing + measures.activation + measures.channelFit)/3; // Placement v3
+
+      const r = m => 1.0 + (m/5)*1.6; // 1.0..2.6
+      const r0 = r(sP), r1 = r(sM), r2 = r(sR), r3 = r(sL);
+
+      // Angles: v0 Product 45°, then CCW
+      const a0 = Math.PI/4, a1 = 3*Math.PI/4, a2 = 5*Math.PI/4, a3 = 7*Math.PI/4;
+
+      const v0 = new THREE.Vector3( Math.cos(a0)*r0, 0, Math.sin(a0)*r0 ); // Product
+      const v1 = new THREE.Vector3( Math.cos(a1)*r1, 0, Math.sin(a1)*r1 ); // Promotion
+      const v2 = new THREE.Vector3( Math.cos(a2)*r2, 0, Math.sin(a2)*r2 ); // Price
+      const v3 = new THREE.Vector3( Math.cos(a3)*r3, 0, Math.sin(a3)*r3 ); // Placement
+
+      // Apex height
+      const h = 1.0 + ((measures.lovesProduct + measures.hasBudget)/10)*3.0; // 1..4
+      const v4 = new THREE.Vector3(0, h, 0);
+
+      baseVerts = [v0,v1,v2,v3];
+      apexVert = v4;
+      return {v0,v1,v2,v3,v4};
+    }
+
+    function createPyramidMesh(verts) {
+      const {v0,v1,v2,v3,v4} = verts;
+      const positions = new Float32Array([
+        v0.x,v0.y,v0.z, v1.x,v1.y,v1.z, v4.x,v4.y,v4.z, // side 0-1-4
+        v1.x,v1.y,v1.z, v2.x,v2.y,v2.z, v4.x,v4.y,v4.z, // side 1-2-4
+        v2.x,v2.y,v2.z, v3.x,v3.y,v3.z, v4.x,v4.y,v4.z, // side 2-3-4
+        v3.x,v3.y,v3.z, v0.x,v0.y,v0.z, v4.x,v4.y,v4.z, // side 3-0-4
+        v0.x,v0.y,v0.z, v1.x,v1.y,v1.z, v2.x,v2.y,v2.z, // base tri
+        v2.x,v2.y,v2.z, v3.x,v3.y,v3.z, v0.x,v0.y,v0.z, // base tri
+      ]);
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions,3));
+      geometry.computeVertexNormals();
+
+      const material = new THREE.MeshPhongMaterial({ color: 0x90a4ae, shininess: 40, flatShading: true, side: THREE.DoubleSide, opacity:0.95, transparent:true });
+      const m = new THREE.Mesh(geometry, material);
+      return m;
+    }
+
+    function createEdgeLines(measures, verts) {
+      const {v0,v1,v2,v3} = verts;
+      // Edge mapping for measures
+      const edges = [
+        {a:v0,b:v1, key:"adoption"},
+        {a:v1,b:v2, key:"wtp"},
+        {a:v2,b:v3, key:"channelPricing"},
+        {a:v3,b:v0, key:"activation"},
+        {a:v0,b:v2, key:"grossMargin"},
+        {a:v1,b:v3, key:"channelFit"},
+      ];
+
+      // Build positions and per-vertex colors
+      const positions = new Float32Array(edges.length * 2 * 3);
+      const colors = new Float32Array(edges.length * 2 * 3);
+
+      edges.forEach((e, i) => {
+        const idx = i*6;
+        positions[idx+0]=e.a.x; positions[idx+1]=e.a.y; positions[idx+2]=e.a.z;
+        positions[idx+3]=e.b.x; positions[idx+4]=e.b.y; positions[idx+5]=e.b.z;
+
+        const sc = statusColor(measures[e.key]);
+        const [r,g,b] = hexToRgbNorm(sc.color);
+        colors[idx+0]=r; colors[idx+1]=g; colors[idx+2]=b;
+        colors[idx+3]=r; colors[idx+4]=g; colors[idx+5]=b;
+      });
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+      geo.setAttribute('color', new THREE.BufferAttribute(colors,3));
+      const mat = new THREE.LineBasicMaterial({ vertexColors: true, transparent:true, opacity:1.0 });
+      const lines = new THREE.LineSegments(geo, mat);
+      return lines;
+    }
+
+    function updateScene() {
+      const measures = updateMeasures();
+      const verts = computeBaseVerts(measures);
+
+      // Mesh
+      if (mesh) scene.remove(mesh);
+      mesh = createPyramidMesh(verts);
+      scene.add(mesh);
+
+      // Edge overlay
+      if (edgeLines) scene.remove(edgeLines);
+      edgeLines = createEdgeLines(measures, verts);
+      scene.add(edgeLines);
+    }
+
+    // --- Camera/orbit helpers ---
+    let camAnim = null;
+    function orbitToEdge(key) {
+      if (!baseVerts.length) return;
+      const center = new THREE.Vector3(0,0,0);
+      let a, b;
+      switch (key) {
+        case "adoption": a=baseVerts[0]; b=baseVerts[1]; break;
+        case "wtp": a=baseVerts[1]; b=baseVerts[2]; break;
+        case "channelPricing": a=baseVerts[2]; b=baseVerts[3]; break;
+        case "activation": a=baseVerts[3]; b=baseVerts[0]; break;
+        case "grossMargin": a=baseVerts[0]; b=baseVerts[2]; break;
+        case "channelFit": a=baseVerts[1]; b=baseVerts[3]; break;
+        default: a=baseVerts[0]; b=baseVerts[1];
+      }
+      const mid = new THREE.Vector3().addVectors(a,b).multiplyScalar(0.5);
+      const dir = new THREE.Vector3().subVectors(mid, center).normalize(); // outward
+      const radius = camera.position.length(); // keep current distance
+      const targetPos = new THREE.Vector3(dir.x*radius, camera.position.y, dir.z*radius);
+
+      camAnim = {
+        from: camera.position.clone(),
+        to: targetPos,
+        start: performance.now(),
+        dur: 600 // ms
+      };
+    }
+
+    function animateCam() {
+      if (!camAnim) return;
+      const t = (performance.now() - camAnim.start) / camAnim.dur;
+      if (t >= 1) {
+        camera.position.copy(camAnim.to);
+        camAnim = null;
+      } else {
+        const ease = t<0.5 ? 2*t*t : -1+(4-2*t)*t; // easeInOutQuad
+        camera.position.lerpVectors(camAnim.from, camAnim.to, ease);
+      }
+      camera.lookAt(0,0,0);
+    }
+
+    function updateFaceLabel() {
+      if (!mesh) return;
+      const pos = mesh.geometry.attributes.position;
+      const faces = [
+        { tri:[0,1,2], name:"Adoption" },        // 0-1-4
+        { tri:[3,4,5], name:"WTP/Churn" },       // 1-2-4
+        { tri:[6,7,8], name:"Channel Pricing" }, // 2-3-4
+        { tri:[9,10,11], name:"Activation" },    // 3-0-4
+      ];
+      let best = -Infinity, label = "—";
+      const camDir = new THREE.Vector3().subVectors(camera.position, new THREE.Vector3(0,0,0)).normalize();
+      for (const f of faces) {
+        const ia=f.tri[0], ib=f.tri[1], ic=f.tri[2];
+        const a = new THREE.Vector3(pos.getX(ia), pos.getY(ia), pos.getZ(ia));
+        const b = new THREE.Vector3(pos.getX(ib), pos.getY(ib), pos.getZ(ib));
+        const c = new THREE.Vector3(pos.getX(ic), pos.getY(ic), pos.getZ(ic));
+        const n = new THREE.Vector3().crossVectors(
+          new THREE.Vector3().subVectors(b,a),
+          new THREE.Vector3().subVectors(c,a)
+        ).normalize();
+        const d = n.dot(camDir);
+        if (d > best) { best = d; label = f.name; }
+      }
+      faceLabel.textContent = "Face: " + label;
+    }
+
+    // --- Three init ---
+    function initThree() {
+      scene = new THREE.Scene();
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      camera = new THREE.PerspectiveCamera(45, w/h, 0.1, 100);
+      camera.position.set(6, 5, 6);
+      camera.lookAt(0,0,0);
+
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setSize(w,h);
+      window.addEventListener('resize', onResize);
+
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
+      const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+      dir.position.set(4, 6, 3);
+      scene.add(dir);
+
+      updateScene();
+      animate();
+
+      // Drag rotate mesh (optional: leave mesh fixed and orbit camera with right-panel buttons)
+      let dragging=false, prev={x:0,y:0};
+      canvas.addEventListener('mousedown', e=>{dragging=true; prev={x:e.clientX, y:e.clientY};});
+      window.addEventListener('mouseup', ()=>dragging=false);
+      window.addEventListener('mousemove', e=>{
+        if (!dragging) return;
+        const dx=(e.clientX-prev.x)/200, dy=(e.clientY-prev.y)/200;
+        prev={x:e.clientX, y:e.clientY};
+        // rotate camera around Y for consistency with orbit style
+        const radius = camera.position.length();
+        const angle = Math.atan2(camera.position.z, camera.position.x);
+        const newAngle = angle - dx;
+        const y = clamp(camera.position.y - dy*2, 1, 12);
+        camera.position.set(Math.cos(newAngle)*radius, y, Math.sin(newAngle)*radius);
+        camera.lookAt(0,0,0);
+      });
+    }
+
+    function onResize() {
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      renderer.setSize(w,h);
+      camera.aspect = w/h;
+      camera.updateProjectionMatrix();
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      animateCam();
+      renderer.render(scene, camera);
+      updateFaceLabel();
+    }
+
+    function attachControls() {
+      const ids = ["features","quality","ux","cost","price","discount","messaging","brand","geo","gtm"];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        el.addEventListener('input', () => {
+          const val = (el.type === "number") ? parseFloat(el.value||"0") : +el.value;
+          controls[id] = isNaN(val) ? 0 : val;
+          updateScene();
+        });
+      });
+
+      // Right-panel buttons
+      document.querySelectorAll(".btn-measure").forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.getAttribute('data-focus');
+          orbitToEdge(key);
+        });
+      });
+    }
+
+    // Save/Load basic scenario
+    function attachSaveLoad() {
+      const saveBtn = document.getElementById('save');
+      const loadBtn = document.getElementById('load');
+      if (saveBtn) saveBtn.addEventListener('click', ()=>{
+        localStorage.setItem('pmf_controls', JSON.stringify(controls));
+        alert('Saved.');
+      });
+      if (loadBtn) loadBtn.addEventListener('click', ()=>{
+        const data = localStorage.getItem('pmf_controls');
+        if (!data) return alert('No saved scenario.');
+        const obj = JSON.parse(data);
+        Object.assign(controls, obj);
+        // reflect in UI
+        Object.keys(controls).forEach(k=>{
+          const el = document.getElementById(k);
+          if (el) el.value = String(controls[k]);
+        });
+        updateScene();
+      });
+    }
+
+    initThree();
+    attachControls();
+    attachSaveLoad();
+  </script>
+</body>
+</html>
