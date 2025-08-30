@@ -33,7 +33,7 @@
   <div class="app">
     <header>
       <h1>4-Body PMF Pyramid — Face Colors, Active Borders, Apex Links, Orbit</h1>
-      <div>Drag to orbit. Click any measure label on the right to orbit the camera to that face. Faces are color-coded; the active face has bold white borders.</div>
+      <div>Drag to orbit. Click any measure label on the right to orbit the camera to that face. Faces are color-coded; the active face has thick white borders.</div>
     </header>
 
     <!-- Left Controls -->
@@ -180,9 +180,8 @@
       return { text: "Red", color: "#e53935" };
     }
 
-    // ---------------------- Measures ----------------------
     function updateMeasures() {
-      // Base edge measures
+      // Base edges
       const adoption = (controls.features + controls.quality + controls.messaging + controls.brand)/4;
       const wtp = (controls.price/10 + (100-controls.discount)/25 + controls.messaging + controls.brand)/4;
       const channelPricing = (controls.price/10 + controls.discount/25 + controls.geo + controls.gtm)/4;
@@ -190,11 +189,11 @@
       const grossMargin = (5 - controls.cost) + controls.price/20;
       const channelFit = (controls.messaging + controls.brand + controls.geo)/3;
 
-      // Apex links (two new ones included)
+      // Apex links (new two included)
       const lovesProduct = (controls.features + controls.quality + controls.ux)/3;
       const hasBudget = (controls.price/20 + (100-controls.discount)/25);
-      const usesChannel = (controls.geo + controls.gtm)/2;         // Customer↔Placement
-      const tellStory = (controls.messaging + controls.brand)/2;    // Customer↔Promotion
+      const usesChannel = (controls.geo + controls.gtm)/2;
+      const tellStory = (controls.messaging + controls.brand)/2;
 
       const measures = {
         adoption: clamp(adoption,0,5),
@@ -238,26 +237,23 @@
       return measures;
     }
 
-    // ---------------------- Geometry ----------------------
     function computeBaseVerts(measures) {
-      // Assign each base corner to one body:
-      // v0 Product, v1 Promotion, v2 Price, v3 Placement
-      const sProduct   = (measures.adoption + measures.activation + measures.grossMargin)/3;           // v0
-      const sPromotion = (measures.adoption + measures.wtp + measures.channelFit)/3;                   // v1
-      const sPrice     = (measures.wtp + measures.channelPricing + measures.grossMargin)/3;            // v2
-      const sPlacement = (measures.channelPricing + measures.activation + measures.channelFit)/3;      // v3
+      // Strength per corner -> base radius
+      const sProduct = (measures.adoption + measures.activation + measures.grossMargin)/3; // v0
+      const sPromotion = (measures.adoption + measures.wtp + measures.channelFit)/3;      // v1
+      const sPrice = (measures.wtp + measures.channelPricing + measures.grossMargin)/3;   // v2
+      const sPlacement = (measures.channelPricing + measures.activation + measures.channelFit)/3; // v3
 
-      const r = m => 1.0 + (m/5)*1.6; // radius 1..2.6
+      const r = m => 1.0 + (m/5)*1.6; // 1..2.6
       const r0=r(sProduct), r1=r(sPromotion), r2=r(sPrice), r3=r(sPlacement);
 
-      // Place corners at 45°, 135°, 225°, 315°
       const a0 = Math.PI/4, a1 = 3*Math.PI/4, a2 = 5*Math.PI/4, a3 = 7*Math.PI/4;
-      const v0 = new THREE.Vector3( Math.cos(a0)*r0, 0, Math.sin(a0)*r0 ); // Product
-      const v1 = new THREE.Vector3( Math.cos(a1)*r1, 0, Math.sin(a1)*r1 ); // Promotion
-      const v2 = new THREE.Vector3( Math.cos(a2)*r2, 0, Math.sin(a2)*r2 ); // Price
-      const v3 = new THREE.Vector3( Math.cos(a3)*r3, 0, Math.sin(a3)*r3 ); // Placement
+      const v0 = new THREE.Vector3( Math.cos(a0)*r0, 0, Math.sin(a0)*r0 ); // Product corner
+      const v1 = new THREE.Vector3( Math.cos(a1)*r1, 0, Math.sin(a1)*r1 ); // Promotion corner
+      const v2 = new THREE.Vector3( Math.cos(a2)*r2, 0, Math.sin(a2)*r2 ); // Price corner
+      const v3 = new THREE.Vector3( Math.cos(a3)*r3, 0, Math.sin(a3)*r3 ); // Placement corner
 
-      // Apex height includes ALL four apex links (two new ones)
+      // Apex: include 4 apex links
       const apexSum = measures.lovesProduct + measures.hasBudget + measures.usesChannel + measures.tellStory; // 0..20
       const h = 1.5 + (apexSum/20)*3.5; // 1.5 .. 5.0
       const v4 = new THREE.Vector3(0, h, 0);
@@ -269,45 +265,40 @@
 
     function materialsForFaces(measures) {
       const col = k => statusColor(measures[k]).color;
-      // Order must match faces tri grouping (see createPyramidMesh)
       return [
-        new THREE.MeshPhongMaterial({ color: col('adoption'),        shininess: 40, flatShading: true, opacity: 0.9, transparent: true, side: THREE.DoubleSide }), // face 0
-        new THREE.MeshPhongMaterial({ color: col('wtp'),             shininess: 40, flatShading: true, opacity: 0.9, transparent: true, side: THREE.DoubleSide }), // face 1
-        new THREE.MeshPhongMaterial({ color: col('channelPricing'),  shininess: 40, flatShading: true, opacity: 0.9, transparent: true, side: THREE.DoubleSide }), // face 2
-        new THREE.MeshPhongMaterial({ color: col('activation'),      shininess: 40, flatShading: true, opacity: 0.9, transparent: true, side: THREE.DoubleSide }), // face 3
-        new THREE.MeshPhongMaterial({ color: "#bbbbbb",              shininess: 20, flatShading: true, opacity: 0.6, transparent: true, side: THREE.DoubleSide }), // base tri A
-        new THREE.MeshPhongMaterial({ color: "#bbbbbb",              shininess: 20, flatShading: true, opacity: 0.6, transparent: true, side: THREE.DoubleSide })  // base tri B
+        new THREE.MeshPhongMaterial({ color: col('adoption'), shininess: 40, flatShading: true, opacity: 0.9, transparent: true, side: THREE.DoubleSide }), // face 0
+        new THREE.MeshPhongMaterial({ color: col('wtp'), shininess: 40, flatShading: true, opacity: 0.9, transparent: true, side: THREE.DoubleSide }),       // face 1
+        new THREE.MeshPhongMaterial({ color: col('channelPricing'), shininess: 40, flatShading: true, opacity: 0.9, transparent: true, side: THREE.DoubleSide }), // face 2
+        new THREE.MeshPhongMaterial({ color: col('activation'), shininess: 40, flatShading: true, opacity: 0.9, transparent: true, side: THREE.DoubleSide }), // face 3
+        new THREE.MeshPhongMaterial({ color: "#bbbbbb", shininess: 20, flatShading: true, opacity: 0.6, transparent: true, side: THREE.DoubleSide }), // base tri A
+        new THREE.MeshPhongMaterial({ color: "#bbbbbb", shininess: 20, flatShading: true, opacity: 0.6, transparent: true, side: THREE.DoubleSide })  // base tri B
       ];
     }
 
     function createPyramidMesh(verts, measures) {
       const {v0,v1,v2,v3,v4} = verts;
       const positions = new Float32Array([
-        // SIDE FACES — order matters (face indices 0..3)
-        v0.x,v0.y,v0.z,  v1.x,v1.y,v1.z,  v4.x,v4.y,v4.z,  // face 0: Adoption (Product–Promotion)
-        v1.x,v1.y,v1.z,  v2.x,v2.y,v2.z,  v4.x,v4.y,v4.z,  // face 1: WTP/Churn (Promotion–Price)
-        v2.x,v2.y,v2.z,  v3.x,v3.y,v3.z,  v4.x,v4.y,v4.z,  // face 2: Channel Pricing (Price–Placement)
-        v3.x,v3.y,v3.z,  v0.x,v0.y,v0.z,  v4.x,v4.y,v4.z,  // face 3: Activation (Placement–Product)
-        // BASE (kept neutral)
-        v0.x,v0.y,v0.z,  v1.x,v1.y,v1.z,  v2.x,v2.y,v2.z,  // base A
-        v2.x,v2.y,v2.z,  v3.x,v3.y,v3.z,  v0.x,v0.y,v0.z   // base B
+        v0.x,v0.y,v0.z, v1.x,v1.y,v1.z, v4.x,v4.y,v4.z, // face 0: Adoption
+        v1.x,v1.y,v1.z, v2.x,v2.y,v2.z, v4.x,v4.y,v4.z, // face 1: WTP/Churn
+        v2.x,v2.y,v2.z, v3.x,v3.y,v3.z, v4.x,v4.y,v4.z, // face 2: Channel Pricing
+        v3.x,v3.y,v3.z, v0.x,v0.y,v0.z, v4.x,v4.y,v4.z, // face 3: Activation
+        v0.x,v0.y,v0.z, v1.x,v1.y,v1.z, v2.x,v2.y,v2.z, // base A
+        v2.x,v2.y,v2.z, v3.x,v3.y,v3.z, v0.x,v0.y,v0.z  // base B
       ]);
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute('position', new THREE.BufferAttribute(positions,3));
       geometry.clearGroups();
-      for (let g=0; g<6; g++) geometry.addGroup(g*3, 3, g); // 4 faces + 2 base tris
+      // group per triangle -> material index
+      for (let g=0; g<6; g++) geometry.addGroup(g*3, 3, g);
       geometry.computeVertexNormals();
-
       const mats = materialsForFaces(measures);
       return new THREE.Mesh(geometry, mats);
     }
 
-    // ---------------------- Active Face Highlight ----------------------
-    let highlightGroup = null;
     function drawActiveFaceBorders(faceIdx) {
+      // remove old highlight
       if (highlightGroup) { scene.remove(highlightGroup); highlightGroup = null; }
       if (faceIdx == null || faceIdx < 0 || faceIdx > 3) return;
-
       const edgesByFace = [
         [[0,1],[1,4],[4,0]], // face 0: adoption
         [[1,2],[2,4],[4,1]], // face 1: wtp
@@ -316,86 +307,79 @@
       ];
       const idxPairs = edgesByFace[faceIdx];
       const verts = [...baseVerts, apexVert]; // indices 0..4
-
       const g = new THREE.Group();
       const radius = 0.05; // thickness
-      const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false }); // always on top
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false });
       idxPairs.forEach(p => {
         const a = verts[p[0]], b = verts[p[1]];
         const dir = new THREE.Vector3().subVectors(b,a);
         const len = dir.length();
         const mid = new THREE.Vector3().addVectors(a,b).multiplyScalar(0.5);
-        const cyl = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, len, 12), mat);
+        const cyl = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, len, 10), mat);
         cyl.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize());
         cyl.position.copy(mid);
-        cyl.renderOrder = 999;
+        cyl.renderOrder = 10;
         g.add(cyl);
       });
       highlightGroup = g;
       scene.add(highlightGroup);
     }
 
-    // ---------------------- Scene Update ----------------------
     function updateScene() {
       const measures = updateMeasures();
       const verts = computeBaseVerts(measures);
       if (mesh) scene.remove(mesh);
       mesh = createPyramidMesh(verts, measures);
       scene.add(mesh);
-      activeFaceLast = -1; // force re-evaluate highlight on next frame
+      // reset highlight to current active face
+      activeFaceLast = -1; // force refresh on next frame
     }
 
-    // ---------------------- Camera Orbit ----------------------
+    // Orbit camera to a given face
     let camAnim = null;
-
-    function faceNormalForKey(key) {
-      // v0 Product, v1 Promotion, v2 Price, v3 Placement; apex v4
-      let a, b, c;
-      switch (key) {
-        case "adoption":       a=baseVerts[0]; b=baseVerts[1]; c=apexVert; break; // v0-v1-v4
-        case "wtp":            a=baseVerts[1]; b=baseVerts[2]; c=apexVert; break; // v1-v2-v4
-        case "channelPricing": a=baseVerts[2]; b=baseVerts[3]; c=apexVert; break; // v2-v3-v4
-        case "activation":     a=baseVerts[3]; b=baseVerts[0]; c=apexVert; break; // v3-v0-v4
-        default:               a=baseVerts[0]; b=baseVerts[1]; c=apexVert;
-      }
-      // Outward normal: (b-a) x (c-a)
-      return new THREE.Vector3().crossVectors(
-        new THREE.Vector3().subVectors(b,a),
-        new THREE.Vector3().subVectors(c,a)
-      ).normalize();
-    }
-
     function orbitToFace(key) {
       if (!baseVerts.length) return;
-      const n = faceNormalForKey(key);
-      // Keep camera height, rotate around Y toward normal direction
+      let a,b;
+      switch (key) {
+        case "adoption": a=baseVerts[0]; b=baseVerts[1]; break;
+        case "wtp": a=baseVerts[1]; b=baseVerts[2]; break;
+        case "channelPricing": a=baseVerts[2]; b=baseVerts[3]; break;
+        case "activation": a=baseVerts[3]; b=baseVerts[0]; break;
+        default: a=baseVerts[0]; b=baseVerts[1];
+      }
+      const n = new THREE.Vector3().crossVectors(
+        new THREE.Vector3().subVectors(b,a),
+        new THREE.Vector3().subVectors(apexVert,a)
+      ).normalize();
+      // project to horizontal to keep comfortable camera height
       const dir = new THREE.Vector3(n.x, 0, n.z).normalize();
-      if (dir.length() < 1e-4) dir.set(1,0,0);
+      if (dir.length() < 0.0001) dir.set(1,0,0);
       const radius = camera.position.length();
       const targetPos = new THREE.Vector3(dir.x*radius, camera.position.y, dir.z*radius);
-      camAnim = { from: camera.position.clone(), to: targetPos, start: performance.now(), dur: 650 };
+      camAnim = { from: camera.position.clone(), to: targetPos, start: performance.now(), dur: 600 };
     }
-
     function animateCam() {
       if (!camAnim) return;
       const t = (performance.now() - camAnim.start) / camAnim.dur;
-      if (t >= 1) { camera.position.copy(camAnim.to); camAnim = null; }
-      else {
-        const ease = t<0.5 ? 2*t*t : -1+(4-2*t)*t; // easeInOutQuad
+      if (t >= 1) {
+        camera.position.copy(camAnim.to);
+        camAnim = null;
+      } else {
+        const ease = t<0.5 ? 2*t*t : -1+(4-2*t)*t;
         camera.position.lerpVectors(camAnim.from, camAnim.to, ease);
       }
       camera.lookAt(0,0,0);
     }
 
-    // ---------------------- Active Face Label + Highlight ----------------------
+    // Determine active face and label + borders
     let activeFaceLast = -1;
     function updateFaceLabelAndHighlight() {
       if (!mesh) return;
       const pos = mesh.geometry.attributes.position;
       const faces = [
-        { tri:[0,1,2],   name:"Adoption" },
-        { tri:[3,4,5],   name:"WTP / Churn" },
-        { tri:[6,7,8],   name:"Channel Pricing" },
+        { tri:[0,1,2], name:"Adoption" },
+        { tri:[3,4,5], name:"WTP / Churn" },
+        { tri:[6,7,8], name:"Channel Pricing" },
         { tri:[9,10,11], name:"Activation & Retention" },
       ];
       let best = -Infinity, idx = -1, label="—";
@@ -409,7 +393,7 @@
           new THREE.Vector3().subVectors(b,a),
           new THREE.Vector3().subVectors(c,a)
         ).normalize();
-        const d = n.dot(camDir); // outward normal facing camera => large positive
+        const d = n.dot(camDir);
         if (d > best) { best = d; idx = i; label = f.name; }
       }
       faceLabel.textContent = "Face: " + label;
@@ -419,7 +403,6 @@
       }
     }
 
-    // ---------------------- Three.js Init ----------------------
     function initThree() {
       scene = new THREE.Scene();
       const w = canvas.clientWidth, h = canvas.clientHeight;
@@ -439,7 +422,7 @@
       updateScene();
       animate();
 
-      // Drag orbit (camera around Y with slight vertical)
+      // Drag orbit (camera around Y)
       let dragging=false, prev={x:0,y:0};
       canvas.addEventListener('mousedown', e=>{dragging=true; prev={x:e.clientX, y:e.clientY};});
       window.addEventListener('mouseup', ()=>dragging=false);
@@ -470,7 +453,6 @@
       updateFaceLabelAndHighlight();
     }
 
-    // ---------------------- UI Wiring ----------------------
     function attachControls() {
       const ids = ["features","quality","ux","cost","price","discount","messaging","brand","geo","gtm"];
       ids.forEach(id => {
@@ -482,7 +464,7 @@
         });
       });
 
-      // Clickable measure rows (orbit to face)
+      // Make measure labels clickable (orbit to face)
       document.querySelectorAll(".measure[data-face]").forEach(row => {
         row.addEventListener('click', () => {
           const key = row.getAttribute('data-face');
