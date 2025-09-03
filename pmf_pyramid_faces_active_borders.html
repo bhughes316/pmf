@@ -1,502 +1,214 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>4-Body PMF Pyramid — Faces, Apex Links, Orbit</title>
-  <style>
-    html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
-    .app { display: grid; grid-template-columns: 300px 1fr 420px; grid-template-rows: auto 1fr auto; height: 100%; }
-    header { grid-column: 1 / 4; padding: 10px 14px; border-bottom: 1px solid #ddd; }
-    header h1 { margin: 0; font-size: 18px; }
-    #left { border-right: 1px solid #eee; padding: 12px; overflow: auto; }
-    #center { position: relative; background: #000; }
-    #right { border-left: 1px solid #eee; padding: 12px; overflow: auto; }
-    footer { grid-column: 1 / 4; border-top: 1px solid #ddd; padding: 8px 12px; display: flex; gap: 8px; align-items: center; }
-    #canvas { width: 100%; height: 100%; min-height: 420px; display: block; }
-    #faceLabel {
-      position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.92);
-      padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; pointer-events: none;
-    }
-    .group { margin-bottom: 16px; }
-    .group h3 { margin: 10px 0 6px; font-size: 14px; }
-    .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0; }
-    input[type="range"] { width: 140px; }
-    select, input[type="number"] { width: 160px; }
-    .measure { border: 1px solid #eee; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px; cursor: pointer; }
-    .measure .left { display: flex; flex-direction: column; }
-    .status { display: inline-block; min-width: 72px; text-align: center; border-radius: 12px; padding: 4px 8px; font-size: 12px; color: #fff; }
-    .value { margin-right:6px; min-width: 28px; display:inline-block; text-align:right; }
-  </style>
+<meta charset="utf-8" />
+<title>4-Body PMF Pyramid – Fixed Orbit, Dynamic Sizing</title>
+<style>
+  html, body { margin: 0; height: 100%; font-family: sans-serif; overflow: hidden; }
+  .app {
+    display: grid;
+    grid-template-columns: 260px minmax(400px, 1fr) 320px;
+    grid-template-rows: auto 1fr auto;
+    height: 100vh;
+  }
+  header { grid-column: 1 / 4; padding: 8px; border-bottom: 1px solid #ccc; }
+  #left, #right { overflow-y: auto; padding: 10px; }
+  #left { border-right: 1px solid #eee; }
+  #right { border-left: 1px solid #eee; }
+  #center {
+    position: relative;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 400px;
+    overflow: hidden;
+  }
+  #canvas { width: 100%; height: 100%; max-height: 80vh; display: block; }
+  #faceLabel {
+    position: absolute; top: 10px; left: 10px;
+    background: rgba(255,255,255,0.9); padding: 4px 8px; border-radius: 4px;
+    font-size: 13px;
+  }
+  footer { grid-column: 1 / 4; border-top: 1px solid #ccc; padding: 4px 8px; }
+  .measure { cursor: pointer; margin: 6px 0; padding: 4px; border: 1px solid #eee; border-radius: 4px; }
+  .status { display: inline-block; min-width: 70px; text-align: center; padding: 2px 6px; border-radius: 10px; color: #fff; font-size: 12px; }
+</style>
 </head>
 <body>
   <div class="app">
-    <header>
-      <h1>4-Body PMF Pyramid — Face Colors, Active Borders, Apex Links, Orbit</h1>
-      <div>Drag to orbit. Click any measure label on the right to orbit the camera to that face. Faces are color-coded; the active face has thick white borders.</div>
-    </header>
-
-    <!-- Left Controls -->
+    <header><h2>4-Body PMF Pyramid – Fixed Orbit & Dynamic Sizing</h2></header>
     <aside id="left">
-      <div class="group"><h3>Product</h3>
-        <div class="row"><label>Features</label><input id="features" type="range" min="0" max="5" value="3"></div>
-        <div class="row"><label>Quality</label><input id="quality" type="range" min="0" max="5" value="3"></div>
-        <div class="row"><label>UX/Onboarding</label><input id="ux" type="range" min="0" max="5" value="3"></div>
-        <div class="row"><label>Cost Index</label><input id="cost" type="range" min="0" max="5" value="2"></div>
-      </div>
-      <div class="group"><h3>Price</h3>
-        <div class="row"><label>Price Point</label><input id="price" type="number" value="20"></div>
-        <div class="row"><label>Discount %</label><input id="discount" type="range" min="0" max="100" value="0"></div>
-      </div>
-      <div class="group"><h3>Promotion</h3>
-        <div class="row"><label>Messaging</label><input id="messaging" type="range" min="0" max="5" value="3"></div>
-        <div class="row"><label>Brand</label><input id="brand" type="range" min="0" max="5" value="3"></div>
-      </div>
-      <div class="group"><h3>Placement</h3>
-        <div class="row"><label>Geo Coverage</label><input id="geo" type="range" min="0" max="5" value="2"></div>
-        <div class="row"><label>Go-to-Market</label><input id="gtm" type="range" min="0" max="5" value="2"></div>
-      </div>
+      <h3>Controls</h3>
+      <label>Features <input type="range" id="features" min="0" max="5" value="3"></label><br>
+      <label>Quality <input type="range" id="quality" min="0" max="5" value="3"></label><br>
+      <label>UX <input type="range" id="ux" min="0" max="5" value="3"></label><br>
+      <label>Cost <input type="range" id="cost" min="0" max="5" value="2"></label><br>
+      <label>Price <input type="number" id="price" value="20"></label><br>
+      <label>Discount % <input type="range" id="discount" min="0" max="100" value="0"></label><br>
+      <label>Messaging <input type="range" id="messaging" min="0" max="5" value="3"></label><br>
+      <label>Brand <input type="range" id="brand" min="0" max="5" value="3"></label><br>
+      <label>Geo <input type="range" id="geo" min="0" max="5" value="2"></label><br>
+      <label>GTM <input type="range" id="gtm" min="0" max="5" value="2"></label>
     </aside>
-
-    <!-- Center Pyramid -->
     <main id="center">
-      <div id="faceLabel">Face: —</div>
       <canvas id="canvas"></canvas>
+      <div id="faceLabel">Face: —</div>
     </main>
-
-    <!-- Right Measures -->
     <aside id="right">
-      <div class="group"><h3>Base Edge Measures (click label to focus)</h3>
-        <div class="measure" data-face="adoption">
-          <div class="left"><strong>Adoption</strong><small>(Product–Promotion)</small></div>
-          <div>
-            <span id="adoption" class="value">0.0</span>
-            <span id="adoptionStatus" class="status">-</span>
-          </div>
-        </div>
-
-        <div class="measure" data-face="wtp">
-          <div class="left"><strong>WTP / Churn</strong><small>(Promotion–Price)</small></div>
-          <div>
-            <span id="wtp" class="value">0.0</span>
-            <span id="wtpStatus" class="status">-</span>
-          </div>
-        </div>
-
-        <div class="measure" data-face="channelPricing">
-          <div class="left"><strong>Channel Pricing</strong><small>(Price–Placement)</small></div>
-          <div>
-            <span id="channelPricing" class="value">0.0</span>
-            <span id="channelPricingStatus" class="status">-</span>
-          </div>
-        </div>
-
-        <div class="measure" data-face="activation">
-          <div class="left"><strong>Activation & Retention</strong><small>(Placement–Product)</small></div>
-          <div>
-            <span id="activation" class="value">0.0</span>
-            <span id="activationStatus" class="status">-</span>
-          </div>
-        </div>
-
-        <div class="measure" data-face="grossMargin">
-          <div class="left"><strong>Gross Margin / Unit Economics</strong><small>(Product–Price)</small></div>
-          <div>
-            <span id="grossMargin" class="value">0.0</span>
-            <span id="grossMarginStatus" class="status">-</span>
-          </div>
-        </div>
-
-        <div class="measure" data-face="channelFit">
-          <div class="left"><strong>Channel Fit</strong><small>(Promotion–Placement)</small></div>
-          <div>
-            <span id="channelFit" class="value">0.0</span>
-            <span id="channelFitStatus" class="status">-</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="group"><h3>Apex Links</h3>
-        <div class="measure">
-          <div class="left"><strong>Loves Product</strong><small>(Customer↔Product)</small></div>
-          <div>
-            <span id="lovesProduct" class="value">0.0</span>
-            <span id="lovesProductStatus" class="status">-</span>
-          </div>
-        </div>
-        <div class="measure">
-          <div class="left"><strong>Has Budget</strong><small>(Customer↔Price)</small></div>
-          <div>
-            <span id="hasBudget" class="value">0.0</span>
-            <span id="hasBudgetStatus" class="status">-</span>
-          </div>
-        </div>
-        <div class="measure">
-          <div class="left"><strong>Uses Channel</strong><small>(Customer↔Placement)</small></div>
-          <div>
-            <span id="usesChannel" class="value">0.0</span>
-            <span id="usesChannelStatus" class="status">-</span>
-          </div>
-        </div>
-        <div class="measure">
-          <div class="left"><strong>Customers Tell Your Story</strong><small>(Customer↔Promotion)</small></div>
-          <div>
-            <span id="tellStory" class="value">0.0</span>
-            <span id="tellStoryStatus" class="status">-</span>
-          </div>
-        </div>
-      </div>
+      <h3>Indicators (Click to focus)</h3>
+      <div class="measure" data-face="adoption">Adoption <span id="adoption" class="status">-</span></div>
+      <div class="measure" data-face="wtp">WTP / Churn <span id="wtp" class="status">-</span></div>
+      <div class="measure" data-face="channelPricing">Channel Pricing <span id="channelPricing" class="status">-</span></div>
+      <div class="measure" data-face="activation">Activation <span id="activation" class="status">-</span></div>
+      <div class="measure" data-face="grossMargin">Gross Margin <span id="grossMargin" class="status">-</span></div>
+      <div class="measure" data-face="channelFit">Channel Fit <span id="channelFit" class="status">-</span></div>
+      <h3>Apex Links</h3>
+      <div class="measure">Loves Product <span id="lovesProduct" class="status">-</span></div>
+      <div class="measure">Has Budget <span id="hasBudget" class="status">-</span></div>
+      <div class="measure">Uses Channel <span id="usesChannel" class="status">-</span></div>
+      <div class="measure">Customers Tell Your Story <span id="tellStory" class="status">-</span></div>
     </aside>
-
-    <footer>
-      <button id="save">Save</button>
-      <button id="load">Load</button>
-      <button id="auto">Auto-Simulate</button>
-    </footer>
+    <footer>Footer controls here</footer>
   </div>
 
-  <!-- Three.js -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
-  <script>
-    let scene, camera, renderer, mesh, highlightGroup;
-    const canvas = document.getElementById('canvas');
-    const faceLabel = document.getElementById('faceLabel');
+<script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
+<script>
+let scene, camera, renderer, mesh, borderGroup;
+const center = document.getElementById("center");
+const controls = {features:3,quality:3,ux:3,cost:2,price:20,discount:0,messaging:3,brand:3,geo:2,gtm:2};
 
-    let baseVerts = []; // v0..v3
-    let apexVert = null;
+// Status colors
+function statusColor(v){if(v>=4)return"#4caf50";if(v>=2)return"#ffb300";return"#e53935";}
 
-    const controls = {
-      features: 3, quality: 3, ux: 3, cost: 2,
-      price: 20, discount: 0,
-      messaging: 3, brand: 3,
-      geo: 2, gtm: 2
-    };
+// Measures
+function updateMeasures(){
+  const m={};
+  m.adoption=(controls.features+controls.quality+controls.messaging+controls.brand)/4;
+  m.wtp=(controls.price/10+(100-controls.discount)/25+controls.messaging+controls.brand)/4;
+  m.channelPricing=(controls.price/10+controls.discount/25+controls.geo+controls.gtm)/4;
+  m.activation=(controls.geo+controls.gtm+controls.features+controls.ux)/4;
+  m.grossMargin=(5-controls.cost)+controls.price/20;
+  m.channelFit=(controls.messaging+controls.brand+controls.geo)/3;
+  m.lovesProduct=(controls.features+controls.quality+controls.ux)/3;
+  m.hasBudget=controls.price/20+(100-controls.discount)/25;
+  m.usesChannel=(controls.geo+controls.gtm)/2;
+  m.tellStory=(controls.messaging+controls.brand)/2;
+  Object.entries(m).forEach(([k,v])=>{
+    const el=document.getElementById(k); if(el){el.textContent=v.toFixed(1); el.style.background=statusColor(v);}
+  });
+  return m;
+}
 
-    const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+// Build pyramid
+function buildPyramid(m){
+  if(mesh) scene.remove(mesh);
+  if(borderGroup) scene.remove(borderGroup);
+  const v0=new THREE.Vector3(1,0,1),v1=new THREE.Vector3(-1,0,1),v2=new THREE.Vector3(-1,0,-1),v3=new THREE.Vector3(1,0,-1);
+  const h=1.5+(m.lovesProduct+m.hasBudget+m.usesChannel+m.tellStory)/20*3.5;
+  const v4=new THREE.Vector3(0,h,0);
+  const geo=new THREE.BufferGeometry();
+  const verts=[v0,v1,v4,v1,v2,v4,v2,v3,v4,v3,v0,v4,v0,v1,v2,v2,v3,v0];
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(verts.flatMap(v=>[v.x,v.y,v.z]),3));
+  geo.computeVertexNormals();
+  const mats=[
+    new THREE.MeshPhongMaterial({color:statusColor(m.adoption)}),
+    new THREE.MeshPhongMaterial({color:statusColor(m.wtp)}),
+    new THREE.MeshPhongMaterial({color:statusColor(m.channelPricing)}),
+    new THREE.MeshPhongMaterial({color:statusColor(m.activation)}),
+    new THREE.MeshPhongMaterial({color:"#999",opacity:0.5,transparent:true}),
+    new THREE.MeshPhongMaterial({color:"#999",opacity:0.5,transparent:true})
+  ];
+  for(let i=0;i<6;i++) geo.addGroup(i*3,3,i);
+  mesh=new THREE.Mesh(geo,mats);
+  scene.add(mesh);
+  addBorders(v0,v1,v2,v3,v4);
+}
 
-    function statusColor(val) {
-      if (val >= 4) return { text: "Green", color: "#4caf50" };
-      if (val >= 2) return { text: "Yellow", color: "#ffb300" };
-      return { text: "Red", color: "#e53935" };
-    }
+// Borders
+function addBorders(v0,v1,v2,v3,v4){
+  borderGroup=new THREE.Group();
+  const edges=[[v0,v1],[v1,v2],[v2,v3],[v3,v0],[v0,v4],[v1,v4],[v2,v4],[v3,v4]];
+  const mat=new THREE.LineBasicMaterial({color:0xffffff});
+  edges.forEach(([a,b])=>{
+    const geo=new THREE.BufferGeometry().setFromPoints([a,b]);
+    borderGroup.add(new THREE.Line(geo,mat));
+  });
+  scene.add(borderGroup);
+}
 
-    function updateMeasures() {
-      // Base edges
-      const adoption = (controls.features + controls.quality + controls.messaging + controls.brand)/4;
-      const wtp = (controls.price/10 + (100-controls.discount)/25 + controls.messaging + controls.brand)/4;
-      const channelPricing = (controls.price/10 + controls.discount/25 + controls.geo + controls.gtm)/4;
-      const activation = (controls.geo + controls.gtm + controls.features + controls.ux)/4;
-      const grossMargin = (5 - controls.cost) + controls.price/20;
-      const channelFit = (controls.messaging + controls.brand + controls.geo)/3;
+// Init
+function init(){
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(45, center.clientWidth/center.clientHeight, 0.1, 100);
+  camera.position.set(5,4,5);
+  camera.lookAt(0,0,0);
+  renderer=new THREE.WebGLRenderer({canvas:document.getElementById("canvas"),antialias:true});
+  resizeCanvas();
+  window.addEventListener("resize", resizeCanvas);
 
-      // Apex links (new two included)
-      const lovesProduct = (controls.features + controls.quality + controls.ux)/3;
-      const hasBudget = (controls.price/20 + (100-controls.discount)/25);
-      const usesChannel = (controls.geo + controls.gtm)/2;
-      const tellStory = (controls.messaging + controls.brand)/2;
+  scene.add(new THREE.HemisphereLight(0xffffff,0x444444,1));
+  const dl=new THREE.DirectionalLight(0xffffff,0.8);dl.position.set(5,10,7);scene.add(dl);
 
-      const measures = {
-        adoption: clamp(adoption,0,5),
-        wtp: clamp(wtp,0,5),
-        channelPricing: clamp(channelPricing,0,5),
-        activation: clamp(activation,0,5),
-        grossMargin: clamp(grossMargin,0,5),
-        channelFit: clamp(channelFit,0,5),
-        lovesProduct: clamp(lovesProduct,0,5),
-        hasBudget: clamp(hasBudget,0,5),
-        usesChannel: clamp(usesChannel,0,5),
-        tellStory: clamp(tellStory,0,5)
-      };
+  document.querySelectorAll("#left input").forEach(inp=>{
+    inp.addEventListener("input",()=>{controls[inp.id]=+inp.value;buildPyramid(updateMeasures());});
+  });
+  document.querySelectorAll(".measure[data-face]").forEach(m=>{
+    m.addEventListener("click",()=>orbitToFace(m.dataset.face));
+  });
 
-      // UI values + color badges
-      const list = [
-        ["adoption","adoptionStatus"],
-        ["wtp","wtpStatus"],
-        ["channelPricing","channelPricingStatus"],
-        ["activation","activationStatus"],
-        ["grossMargin","grossMarginStatus"],
-        ["channelFit","channelFitStatus"],
-        ["lovesProduct","lovesProductStatus"],
-        ["hasBudget","hasBudgetStatus"],
-        ["usesChannel","usesChannelStatus"],
-        ["tellStory","tellStoryStatus"]
-      ];
-      list.forEach(([id,sid])=>{
-        const val = measures[id];
-        const el = document.getElementById(id);
-        if (el) el.textContent = (val??0).toFixed(1);
-        const st = document.getElementById(sid);
-        if (st) {
-          const sc = statusColor(val);
-          st.textContent = sc.text;
-          st.style.background = sc.color;
-          st.style.color = "#fff";
-        }
-      });
+  setupOrbitDrag();
+  buildPyramid(updateMeasures());
+  animate();
+}
 
-      return measures;
-    }
+// Orbit Drag with fixed radius
+let isDragging=false, prev={x:0,y:0}, spherical=new THREE.Spherical();
+function setupOrbitDrag(){
+  spherical.setFromVector3(camera.position.clone());
+  center.addEventListener("mousedown",e=>{isDragging=true;prev.x=e.clientX;prev.y=e.clientY;});
+  window.addEventListener("mouseup",()=>isDragging=false);
+  window.addEventListener("mousemove",e=>{
+    if(!isDragging)return;
+    const dx=(e.clientX-prev.x)*0.005;
+    const dy=(e.clientY-prev.y)*0.005;
+    prev.x=e.clientX;prev.y=e.clientY;
+    spherical.theta-=dx;
+    spherical.phi=Math.max(0.1,Math.min(Math.PI-0.1,spherical.phi-dy));
+    camera.position.setFromSpherical(spherical);
+    camera.lookAt(0,0,0);
+  });
+}
 
-    function computeBaseVerts(measures) {
-      // Strength per corner -> base radius
-      const sProduct = (measures.adoption + measures.activation + measures.grossMargin)/3; // v0
-      const sPromotion = (measures.adoption + measures.wtp + measures.channelFit)/3;      // v1
-      const sPrice = (measures.wtp + measures.channelPricing + measures.grossMargin)/3;   // v2
-      const sPlacement = (measures.channelPricing + measures.activation + measures.channelFit)/3; // v3
+// Resize Canvas
+function resizeCanvas(){
+  const w=center.clientWidth,h=center.clientHeight;
+  renderer.setSize(w,h);
+  camera.aspect=w/h;
+  camera.updateProjectionMatrix();
+}
 
-      const r = m => 1.0 + (m/5)*1.6; // 1..2.6
-      const r0=r(sProduct), r1=r(sPromotion), r2=r(sPrice), r3=r(sPlacement);
+// Orbit to face
+let camAnim=null;
+function orbitToFace(face){
+  const dirs={adoption:[1,0,1],wtp:[-1,0,1],channelPricing:[-1,0,-1],activation:[1,0,-1]};
+  const d=new THREE.Vector3(...dirs[face]);
+  const r=camera.position.length(); d.normalize().multiplyScalar(r);
+  camAnim={from:camera.position.clone(),to:d,start:performance.now(),dur:600};
+}
 
-      const a0 = Math.PI/4, a1 = 3*Math.PI/4, a2 = 5*Math.PI/4, a3 = 7*Math.PI/4;
-      const v0 = new THREE.Vector3( Math.cos(a0)*r0, 0, Math.sin(a0)*r0 ); // Product corner
-      const v1 = new THREE.Vector3( Math.cos(a1)*r1, 0, Math.sin(a1)*r1 ); // Promotion corner
-      const v2 = new THREE.Vector3( Math.cos(a2)*r2, 0, Math.sin(a2)*r2 ); // Price corner
-      const v3 = new THREE.Vector3( Math.cos(a3)*r3, 0, Math.sin(a3)*r3 ); // Placement corner
+function animate(){
+  requestAnimationFrame(animate);
+  if(camAnim){
+    const t=(performance.now()-camAnim.start)/camAnim.dur;
+    if(t>=1){camera.position.copy(camAnim.to);camAnim=null;}
+    else{const e=t<0.5?2*t*t:-1+(4-2*t)*t;camera.position.lerpVectors(camAnim.from,camAnim.to,e);}
+    camera.lookAt(0,0,0);
+  }
+  renderer.render(scene,camera);
+}
 
-      // Apex: include 4 apex links
-      const apexSum = measures.lovesProduct + measures.hasBudget + measures.usesChannel + measures.tellStory; // 0..20
-      const h = 1.5 + (apexSum/20)*3.5; // 1.5 .. 5.0
-      const v4 = new THREE.Vector3(0, h, 0);
-
-      baseVerts = [v0,v1,v2,v3];
-      apexVert = v4;
-      return {v0,v1,v2,v3,v4};
-    }
-
-    function materialsForFaces(measures) {
-      const col = k => statusColor(measures[k]).color;
-      return [
-        new THREE.MeshPhongMaterial({ color: col('adoption'), shininess: 40, flatShading: true, opacity: 0.9, transparent: true, side: THREE.DoubleSide }), // face 0
-        new THREE.MeshPhongMaterial({ color: col('wtp'), shininess: 40, flatShading: true, opacity: 0.9, transparent: true, side: THREE.DoubleSide }),       // face 1
-        new THREE.MeshPhongMaterial({ color: col('channelPricing'), shininess: 40, flatShading: true, opacity: 0.9, transparent: true, side: THREE.DoubleSide }), // face 2
-        new THREE.MeshPhongMaterial({ color: col('activation'), shininess: 40, flatShading: true, opacity: 0.9, transparent: true, side: THREE.DoubleSide }), // face 3
-        new THREE.MeshPhongMaterial({ color: "#bbbbbb", shininess: 20, flatShading: true, opacity: 0.6, transparent: true, side: THREE.DoubleSide }), // base tri A
-        new THREE.MeshPhongMaterial({ color: "#bbbbbb", shininess: 20, flatShading: true, opacity: 0.6, transparent: true, side: THREE.DoubleSide })  // base tri B
-      ];
-    }
-
-    function createPyramidMesh(verts, measures) {
-      const {v0,v1,v2,v3,v4} = verts;
-      const positions = new Float32Array([
-        v0.x,v0.y,v0.z, v1.x,v1.y,v1.z, v4.x,v4.y,v4.z, // face 0: Adoption
-        v1.x,v1.y,v1.z, v2.x,v2.y,v2.z, v4.x,v4.y,v4.z, // face 1: WTP/Churn
-        v2.x,v2.y,v2.z, v3.x,v3.y,v3.z, v4.x,v4.y,v4.z, // face 2: Channel Pricing
-        v3.x,v3.y,v3.z, v0.x,v0.y,v0.z, v4.x,v4.y,v4.z, // face 3: Activation
-        v0.x,v0.y,v0.z, v1.x,v1.y,v1.z, v2.x,v2.y,v2.z, // base A
-        v2.x,v2.y,v2.z, v3.x,v3.y,v3.z, v0.x,v0.y,v0.z  // base B
-      ]);
-      const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute('position', new THREE.BufferAttribute(positions,3));
-      geometry.clearGroups();
-      // group per triangle -> material index
-      for (let g=0; g<6; g++) geometry.addGroup(g*3, 3, g);
-      geometry.computeVertexNormals();
-      const mats = materialsForFaces(measures);
-      return new THREE.Mesh(geometry, mats);
-    }
-
-    function drawActiveFaceBorders(faceIdx) {
-      // remove old highlight
-      if (highlightGroup) { scene.remove(highlightGroup); highlightGroup = null; }
-      if (faceIdx == null || faceIdx < 0 || faceIdx > 3) return;
-      const edgesByFace = [
-        [[0,1],[1,4],[4,0]], // face 0: adoption
-        [[1,2],[2,4],[4,1]], // face 1: wtp
-        [[2,3],[3,4],[4,2]], // face 2: channelPricing
-        [[3,0],[0,4],[4,3]], // face 3: activation
-      ];
-      const idxPairs = edgesByFace[faceIdx];
-      const verts = [...baseVerts, apexVert]; // indices 0..4
-      const g = new THREE.Group();
-      const radius = 0.05; // thickness
-      const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false });
-      idxPairs.forEach(p => {
-        const a = verts[p[0]], b = verts[p[1]];
-        const dir = new THREE.Vector3().subVectors(b,a);
-        const len = dir.length();
-        const mid = new THREE.Vector3().addVectors(a,b).multiplyScalar(0.5);
-        const cyl = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, len, 10), mat);
-        cyl.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize());
-        cyl.position.copy(mid);
-        cyl.renderOrder = 10;
-        g.add(cyl);
-      });
-      highlightGroup = g;
-      scene.add(highlightGroup);
-    }
-
-    function updateScene() {
-      const measures = updateMeasures();
-      const verts = computeBaseVerts(measures);
-      if (mesh) scene.remove(mesh);
-      mesh = createPyramidMesh(verts, measures);
-      scene.add(mesh);
-      // reset highlight to current active face
-      activeFaceLast = -1; // force refresh on next frame
-    }
-
-    // Orbit camera to a given face
-    let camAnim = null;
-    function orbitToFace(key) {
-      if (!baseVerts.length) return;
-      let a,b;
-      switch (key) {
-        case "adoption": a=baseVerts[0]; b=baseVerts[1]; break;
-        case "wtp": a=baseVerts[1]; b=baseVerts[2]; break;
-        case "channelPricing": a=baseVerts[2]; b=baseVerts[3]; break;
-        case "activation": a=baseVerts[3]; b=baseVerts[0]; break;
-        default: a=baseVerts[0]; b=baseVerts[1];
-      }
-      const n = new THREE.Vector3().crossVectors(
-        new THREE.Vector3().subVectors(b,a),
-        new THREE.Vector3().subVectors(apexVert,a)
-      ).normalize();
-      // project to horizontal to keep comfortable camera height
-      const dir = new THREE.Vector3(n.x, 0, n.z).normalize();
-      if (dir.length() < 0.0001) dir.set(1,0,0);
-      const radius = camera.position.length();
-      const targetPos = new THREE.Vector3(dir.x*radius, camera.position.y, dir.z*radius);
-      camAnim = { from: camera.position.clone(), to: targetPos, start: performance.now(), dur: 600 };
-    }
-    function animateCam() {
-      if (!camAnim) return;
-      const t = (performance.now() - camAnim.start) / camAnim.dur;
-      if (t >= 1) {
-        camera.position.copy(camAnim.to);
-        camAnim = null;
-      } else {
-        const ease = t<0.5 ? 2*t*t : -1+(4-2*t)*t;
-        camera.position.lerpVectors(camAnim.from, camAnim.to, ease);
-      }
-      camera.lookAt(0,0,0);
-    }
-
-    // Determine active face and label + borders
-    let activeFaceLast = -1;
-    function updateFaceLabelAndHighlight() {
-      if (!mesh) return;
-      const pos = mesh.geometry.attributes.position;
-      const faces = [
-        { tri:[0,1,2], name:"Adoption" },
-        { tri:[3,4,5], name:"WTP / Churn" },
-        { tri:[6,7,8], name:"Channel Pricing" },
-        { tri:[9,10,11], name:"Activation & Retention" },
-      ];
-      let best = -Infinity, idx = -1, label="—";
-      const camDir = new THREE.Vector3().subVectors(camera.position, new THREE.Vector3(0,0,0)).normalize();
-      for (let i=0;i<faces.length;i++) {
-        const f = faces[i];
-        const a = new THREE.Vector3(pos.getX(f.tri[0]), pos.getY(f.tri[0]), pos.getZ(f.tri[0]));
-        const b = new THREE.Vector3(pos.getX(f.tri[1]), pos.getY(f.tri[1]), pos.getZ(f.tri[1]));
-        const c = new THREE.Vector3(pos.getX(f.tri[2]), pos.getY(f.tri[2]), pos.getZ(f.tri[2]));
-        const n = new THREE.Vector3().crossVectors(
-          new THREE.Vector3().subVectors(b,a),
-          new THREE.Vector3().subVectors(c,a)
-        ).normalize();
-        const d = n.dot(camDir);
-        if (d > best) { best = d; idx = i; label = f.name; }
-      }
-      faceLabel.textContent = "Face: " + label;
-      if (idx !== activeFaceLast) {
-        activeFaceLast = idx;
-        drawActiveFaceBorders(idx);
-      }
-    }
-
-    function initThree() {
-      scene = new THREE.Scene();
-      const w = canvas.clientWidth, h = canvas.clientHeight;
-      camera = new THREE.PerspectiveCamera(45, w/h, 0.1, 100);
-      camera.position.set(6, 5, 6);
-      camera.lookAt(0,0,0);
-
-      renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-      renderer.setSize(w,h);
-      window.addEventListener('resize', onResize);
-
-      scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
-      const dir = new THREE.DirectionalLight(0xffffff, 0.9);
-      dir.position.set(4, 6, 3);
-      scene.add(dir);
-
-      updateScene();
-      animate();
-
-      // Drag orbit (camera around Y)
-      let dragging=false, prev={x:0,y:0};
-      canvas.addEventListener('mousedown', e=>{dragging=true; prev={x:e.clientX, y:e.clientY};});
-      window.addEventListener('mouseup', ()=>dragging=false);
-      window.addEventListener('mousemove', e=>{
-        if (!dragging) return;
-        const dx=(e.clientX-prev.x)/200, dy=(e.clientY-prev.y)/200;
-        prev={x:e.clientX, y:e.clientY};
-        const radius = camera.position.length();
-        const angle = Math.atan2(camera.position.z, camera.position.x);
-        const newAngle = angle - dx;
-        const y = clamp(camera.position.y - dy*2, 1, 12);
-        camera.position.set(Math.cos(newAngle)*radius, y, Math.sin(newAngle)*radius);
-        camera.lookAt(0,0,0);
-      });
-    }
-
-    function onResize() {
-      const w = canvas.clientWidth, h = canvas.clientHeight;
-      renderer.setSize(w,h);
-      camera.aspect = w/h;
-      camera.updateProjectionMatrix();
-    }
-
-    function animate() {
-      requestAnimationFrame(animate);
-      animateCam();
-      renderer.render(scene, camera);
-      updateFaceLabelAndHighlight();
-    }
-
-    function attachControls() {
-      const ids = ["features","quality","ux","cost","price","discount","messaging","brand","geo","gtm"];
-      ids.forEach(id => {
-        const el = document.getElementById(id);
-        el.addEventListener('input', () => {
-          const val = (el.type === "number") ? parseFloat(el.value||"0") : +el.value;
-          controls[id] = isNaN(val) ? 0 : val;
-          updateScene();
-        });
-      });
-
-      // Make measure labels clickable (orbit to face)
-      document.querySelectorAll(".measure[data-face]").forEach(row => {
-        row.addEventListener('click', () => {
-          const key = row.getAttribute('data-face');
-          orbitToFace(key);
-        });
-      });
-    }
-
-    // Save/Load
-    function attachSaveLoad() {
-      const saveBtn = document.getElementById('save');
-      const loadBtn = document.getElementById('load');
-      if (saveBtn) saveBtn.addEventListener('click', ()=>{
-        localStorage.setItem('pmf_controls', JSON.stringify(controls));
-        alert('Saved.');
-      });
-      if (loadBtn) loadBtn.addEventListener('click', ()=>{
-        const data = localStorage.getItem('pmf_controls');
-        if (!data) return alert('No saved scenario.');
-        const obj = JSON.parse(data);
-        Object.assign(controls, obj);
-        Object.keys(controls).forEach(k=>{
-          const el = document.getElementById(k);
-          if (el) el.value = String(controls[k]);
-        });
-        updateScene();
-      });
-    }
-
-    initThree();
-    attachControls();
-    attachSaveLoad();
-  </script>
+init();
+</script>
 </body>
 </html>
